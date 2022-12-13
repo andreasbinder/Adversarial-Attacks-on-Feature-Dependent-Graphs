@@ -1,3 +1,6 @@
+# Experiments Configurations and Executables
+experiments/*
+
 # Temporary and binary files
 *~
 *.py[cod]

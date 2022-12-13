@@ -53,8 +53,56 @@ class PGD(BaseAttack):
             gradient = torch.autograd.grad(loss, x)[0]
 
             # x_pert = torch.clamp(x + epsilon * delta[norm], 0, 1)
+
             x = x + epsilon * self.delta(norm, gradient)
 
+        return x.detach()
+
+class DynamicPGD(BaseAttack):
+
+    def __init__(self, device, model) -> None:
+        super().__init__(device, model)
+        
+
+    def attack(self, x: torch.Tensor, y: torch.Tensor, epsilon: float, norm: str = "2",
+                         loss_fn=torch.nn.functional.cross_entropy, iterations=5):
+
+        for _ in range(iterations):
+
+            logits = self.model(x)
+            loss = loss_fn(logits, y)
+
+            gradient = torch.autograd.grad(loss, x)[0]
+
+            # x_pert = torch.clamp(x + epsilon * delta[norm], 0, 1)
+            x = x + epsilon * self.delta(norm, gradient)
+
+        return x.detach()
+
+class SoftKNN(BaseAttack):
+
+    def __init__(self, device, model) -> None:
+        super().__init__(device, model)
+        
+
+    def attack(self, data: torch.Tensor, y: torch.Tensor, epsilon: float, norm: str = "2",
+                         loss_fn=torch.nn.functional.cross_entropy, iterations=5):
+
+        for _ in range(iterations):
+            
+            logits = self.model(x)
+            loss = loss_fn(logits, y)
+            gradient = torch.autograd.grad(loss, x)[0]
+
+            edge_indices = self.soft_knn(x)
+            edge_loss = loss_fn_data(edge_indices)
+            edge_loss = torch.autograd.grad(edge_loss, x)[0]
+
+            gradient = torch.autograd.grad(loss, x)[0]
+
+            x = x + epsilon * self.delta(norm, gradient)
+
+            # 
         return x.detach()
 
 def fast_gradient_attack(logits: torch.Tensor, x: torch.Tensor, y: torch.Tensor, epsilon: float, norm: str = "2",
