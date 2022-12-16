@@ -40,9 +40,30 @@ class PGD(BaseAttack):
 
     def __init__(self, device, model) -> None:
         super().__init__(device, model)
-        
 
     def attack(self, x: torch.Tensor, y: torch.Tensor, epsilon: float, norm: str = "2",
+                         loss_fn=torch.nn.functional.cross_entropy, iterations=5):
+
+        x_orig = x
+        x_proj = x
+        for _ in range(iterations):
+            
+            # 1. Get x_new going from x_proj in gradient direction
+            logits = self.model(x_proj)
+            loss = loss_fn(logits, y)
+            gradient = torch.autograd.grad(loss, x_proj)[0]
+            x_new = x_proj + epsilon * self.delta(norm, gradient)
+
+            # 2. Calculate new x_proj from (the out of ball) x_new and 
+            # the original x_orig to be within budget
+            z = x_new - x_orig
+            z_normalized = self.delta(norm, z)
+            x_proj = x_orig + z_normalized * epsilon
+
+        return x_proj.detach()
+  
+
+    def attack_old(self, x: torch.Tensor, y: torch.Tensor, epsilon: float, norm: str = "2",
                          loss_fn=torch.nn.functional.cross_entropy, iterations=5):
 
         for _ in range(iterations):
@@ -54,6 +75,7 @@ class PGD(BaseAttack):
 
             # x_pert = torch.clamp(x + epsilon * delta[norm], 0, 1)
 
+            # TODO does the norm ball change or do I need x_original
             x = x + epsilon * self.delta(norm, gradient)
 
         return x.detach()
